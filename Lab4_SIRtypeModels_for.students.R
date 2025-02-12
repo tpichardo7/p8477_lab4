@@ -54,11 +54,29 @@ beta=520/365; gamma=1/7; mu=1/(70*365);
 ##############################
 if(F){
   
-  parameters.SIR =  # ASSEMBLE YOUR PARAMETER SET FOR EACH MODEL
+  parameters.SIR =  function(t, state, parameters){
+    with(as.list(c(state, parameters)),{
+      
+      #rate of change
+      dS = -beta * S * I / N
+      dI = beta * S * I / N - gamma * I
+      
+      #return the rate of change
+      list(c(dS, dI))
+    })
+  }
   
-  parameters.SIRdem =  # ASSEMBLE YOUR PARAMETER SET FOR EACH MODEL
-    
-}
+  parameters.SIRdem =  function(t, state, parameters){
+    with(as.list(c(state, parameters)),{
+      
+      #rate of change
+      dS = mu * N - beta * S * I / N - mu * S
+      dI = beta * S * I/N - gamma * I - mu * I
+      
+      #return the rate of change
+      list(c(dS, dI))
+    })
+}}
 
   
   
@@ -112,7 +130,7 @@ SIS=function(t,state,parameters){
     
     # EQUATIONS for the SIS:
     dS=-beta*S*I/N+gamma*I;
-    dI= # FILL IN THE EQUATION HERE
+    dI= beta*S*I/N-gamma*I;
     
     # return the rate of change
     list(c(dS,dI))
@@ -130,7 +148,8 @@ sim=ode(y=state,times=times,func=SIS,parms=parameters);
 s=sim[,'S']/N
 i=sim[,'I']/N
 
-
+plot(times, s, type = 'l')
+plot(times, i, type = 'l')
 
 
 
