@@ -53,7 +53,7 @@ I0 = 20
 S0 = 0.2 * N
 beta = 520 / 365
 gamma = 1 / 7
-mu = 1 / 70 / 365
+mu = 1 / 70 * 365
 
 ```{r}
 N=1e5
@@ -64,20 +64,10 @@ parameters = c(beta=520/365, gamma=1/7, mu=1/(70*365))
 times=seq(0,365*100,by=1)
 ```
 
-```{r}
-percent_sim = ode(y = state, times = times, func = SIRdem, parms = parameters)
-percent_sim_df = as.data.frame(percent_sim)
-
-percent_sim_df$S_frac = percent_sim_df$S / N
-percent_sim_df$I_frac = percent_sim_df$I / N
-```
-
 ## Question 1
 Plot *%I* vs *time* for both models and compare. What is the main difference and why?
 
 ```{r}
-if(F){
-
   parameters.SIR =  function(t, state, parameters){
     with(as.list(c(state, parameters)),{
       
@@ -90,7 +80,7 @@ if(F){
     })
   }
   
-  parameters.SIRdem =  function(t, state, parameters){
+  parameters.SIRdem = function(t, state, parameters){
     with(as.list(c(state, parameters)),{
       
       #rate of change
@@ -100,18 +90,39 @@ if(F){
       #return the rate of change
       list(c(dS, dI))
     })
-}}
+}
 ```
 
 ```{r}
-percent_infectious = ggplot(percent_sim_df, aes(x = time, y = I_frac, color = time)) +
-  geom_line() +
+basic_SIR = ode(y = state, times = times, func = parameters.SIR, parms = parameters)
+basic_SIR_df = as.data.frame(basic_SIR)
+
+basic_SIR_df$S_frac = basic_SIR_df$S/N
+basic_SIR_df$I_frac = basic_SIR_df$I/N
+```
+
+```{r}
+percent_sim = ode(y = state, times = times, func = parameters.SIRdem, parms = parameters)
+percent_sim_df = as.data.frame(percent_sim)
+
+percent_sim_df$S_frac = percent_sim_df$S / N
+percent_sim_df$I_frac = percent_sim_df$I / N
+```
+
+
+```{r}
+infectious = ggplot() +
+  geom_line(data = percent_sim_df, aes(x = time, y = I_frac, color = "SIR with Demography")) +
+  geom_line(data = basic_SIR_df, aes(x = time, y = I_frac, color = "Basic SIR")) +
   labs(title = "Fraction of Infectious Population", 
        x = "Day",
-       y = "Number of People")
+       y = "Fraction of Infectious Population") +
+  scale_color_manual(values = c("SIR with Demography" = "blue", "Basic SIR" = "red"))
 
-percent_infectious
+infectious
 ```
+
+The main differences is in the basic SIR model, the infected population rises and falls until there are no longer people susceptible. This assumes that once the individual is infected and recovers, that they are no longer in the population. The SIR with demography model introduces birth and death rates. Therefore, the susceptible population never zeros out as new births enter the population, reaching a stable point of the infected population.
 
 
 ## Question 2
@@ -119,17 +130,17 @@ What are the %S (S/N), and %I (I/N) at the end of the simulation? How are these 
 Hint: what is R0 for the SIR model with demography?
 
 ```{r}
-percent_susceptible = ggplot(percent_sim_df, aes(x = time, y = S_frac, color = time)) +
+susceptible = ggplot(percent_sim_df, aes(x = time, y = S_frac, color = time)) +
   geom_line() +
   labs(title = "Fraction of Susceptible Population", 
        x = "Day",
        y = "Number of People")
 
-percent_susceptible
+susceptible
 ```
 
 ```{r}
-percent_infectious + percent_susceptible
+infectious + susceptible
 ```
 
 # **Part 2: SIS Model**
@@ -165,6 +176,18 @@ s=sim[,'S']/N
 i=sim[,'I']/N
 ```
 
+```{r}
+sim_df = data.frame(time = times, S = s, I = i)
+
+ggplot(sim_df, aes(x = time)) +
+  geom_line(aes(y = S, color = "Susceptible")) +
+  geom_line(aes(y = I, color = "Infected")) +
+  labs(title = "SIS Model: Susceptible and Infected Over Time", 
+       x = "Time (Days)",
+       y = "Fraction of Population") +
+  scale_color_manual(values = c("Susceptible" = "blue", "Infected" = "red"))
+```
+
 
 ## Question 4
 Run the SIS model using the following initial conditions:
@@ -192,9 +215,36 @@ sis_sus = ggplot(SIS_df, aes(x = time, y = S, color = time)) +
 sis_sus
 ```
 
+```{r}
+sis_inf = ggplot(SIS_df, aes(x = time, y = I, color = time)) +
+  geom_line() +
+  labs(title = "Infected Population", 
+       x = "Day",
+       y = "Number of People") 
+
+sis_inf
+```
+
+
 ## Question 5
-What are S/N and I/N at equilibrium? How are these values compared to results from the formula derived from the mdel (I*/N = 1-1/R0 and S*/N = 1/R0)?
+What are S/N and I/N at equilibrium? How are these values compared to results from the formula derived from the model (I*/N = 1-1/R0 and S*/N = 1/R0)?
 Hint: what is R0 for the SIS model?
+
+```{r}
+R0 = parameters["beta"] / parameters["gamma"]
+
+S_equilibrium = 1 / R0
+I_equilibrium = 1 - S_equilibrium
+
+print(S_equilibrium)
+print(I_equilibrium)
+
+S_last = SIS_df$S[nrow(SIS_df)] / N
+I_last = SIS_df$I[nrow(SIS_df)] / N
+
+print(S_last)
+print(I_last)
+```
 
 
 # **Part 3: SEIR Model**
@@ -202,11 +252,84 @@ Hint: what is R0 for the SIS model?
 ## Question 6
 Code up an SEIR model based on the equations above [provide your code for the SEIR model in your report].
 
+```{r}
+SEIR=function(t,state,parameters){
+  with(as.list(c(state,parameters)),{
+    # rate of change
+    
+    # EQUATIONS for the SIS:
+    dS = -beta * S * I / N
+    dE = beta * S * I / N - sigma * E
+    dI= sigma * E - gamma * I
+    dR = gamma * I
+    
+    # return the rate of change
+    list(c(dS, dE, dI, dR))
+  }) # end with(as.list...)
+}
+```
+
+```{r}
+N = 1e5
+S0 = N - I0
+I0 = 1
+E0 = 0 
+R0 = 0
+
+beta = 520 / 365
+gamma = 1 / 7
+sigma = 1 / 5
+
+state = c(S = S0, E = E0, I = I0, R = R0)
+parameters = c(beta = beta, gamma = gamma, sigma = sigma)
+times = seq(0, 100, by = 1)
+```
+
+```{r}
+seir_sim = ode(y = state, times = times, func = SEIR, parms = parameters)
+seir_df = as.data.frame(seir_sim)
+
+seir_plot = ggplot(seir_df, aes(x = time)) +
+  geom_line(aes(y = S / N, color = "Susceptible")) +
+  geom_line(aes(y = E / N, color = "Exposed")) +
+  geom_line(aes(y = I / N, color = "Infectious")) +
+  geom_line(aes(y = R / N, color = "Recovered")) +
+  labs(title = "SEIR Model Simulation",
+       x = "Time (days)",
+       y = "Fraction of Population") +
+  scale_color_manual(values = c("blue", "yellow", "red", "green")) +
+  theme_minimal()
+
+print(seir_plot)
+```
+
 ## Quetsion 7
 Compare S, I, Incidence, over time computed by the 2 models. What are the differences between the two simulations?
 
+```{r}
+basic_SIR_plot = ggplot() +
+  geom_line(data = basic_SIR_df, aes(x = time, y = S_frac, color = "Susceptible (SIR)")) +
+  geom_line(data = basic_SIR_df, aes(x = time, y = I_frac, color = "Infected (SIR)")) +
+  geom_line(data = basic_SIR_df, aes(x = time, y = I, color = "Incidence (SIR)")) +
+  labs(title = "Basic SIR Model: Susceptible, Infected, and Incidence Over Time",
+       x = "Time (Days)", y = "Fraction of Population") +
+  scale_color_manual(values = c("blue", "red", "green")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 
-# **Part 4: Application: Ebola Epidemic**
+# Plot for SIR model with demography
+SIRdem_plot = ggplot() +
+  geom_line(data = percent_sim_df, aes(x = time, y = S_frac, color = "Susceptible (SIR with Demography)")) +
+  geom_line(data = percent_sim_df, aes(x = time, y = I_frac, color = "Infected (SIR with Demography)")) +
+  geom_line(data = percent_sim_df, aes(x = time, y = I, color = "Incidence (SIR with Demography)")) +
+  labs(title = "SIR Model with Demography: Susceptible, Infected, and Incidence Over Time",
+       x = "Time (Days)", y = "Fraction of Population") +
+  scale_color_manual(values = c("blue", "red", "green")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
 
-
+```{r}
+basic_SIR_plot + SIRdem_plot
+```
 

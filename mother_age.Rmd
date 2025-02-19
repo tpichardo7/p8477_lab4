@@ -1,0 +1,56 @@
+---
+title: "cleaning data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(deSolve)
+library(patchwork)
+```
+
+```{r}
+mother_ages = read_csv(file = "./data/mother_ages.csv") |> 
+  janitor::clean_names() |> 
+  rename(
+    total = b13016001,
+    total_se = b13016001_error,
+    total_birth = b13016002, 
+    total_birth_se = b13016002_error,
+    birth_15_19 = b13016003,
+    birth_15_19_se = b13016003_error,
+    birth_20_24 = b13016004,
+    birth_20_24_se = b13016004_error,
+    birth_25_29 = b13016005,
+    birth_25_29_se = b13016005_error,
+    birth_30_34 = b13016006,
+    birth_30_34_se = b13016006_error,
+    birth_35_39 = b13016007,
+    birth_35_39_se = b13016007_error,
+    birth_40_44 = b13016008, 
+    birth_40_44_se = b13016008_error, 
+    birth_45_50 = b13016009,
+    birth_45_50_se = b13016009_error,
+    total_no_birth = b13016010, 
+    total_no_birth_se = b13016010_error,
+    no_birth_15_19 = b13016011, 
+    no_birth_15_19_se = b13016011_error, 
+    no_birth_20_24 = b13016012, 
+    no_birth_20_24_se = b13016012_error,
+    no_birth_25_29 = b13016013,
+    no_birth_25_29_se = b13016013_error,
+    no_birth_30_34 = b13016014,
+    no_birth_30_34_se = b13016014_error,
+    no_birth_35_39 = b13016015, 
+    no_birth_35_39_se = b13016015_error, 
+    no_birth_40_44 = b13016016,
+    no_birth_40_44_se = b13016016_error,
+    no_birth_45_50 = b13016017, 
+    no_birth_45_50_se = b13016017_error) |> 
+  
+```
+
+```{r}
+write_csv(mother_ages, "./data/mother_ages_clean.csv")
+```
+
