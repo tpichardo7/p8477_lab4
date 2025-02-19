@@ -150,6 +150,9 @@ infectious + susceptible
 
 <img src="Homework-4_files/figure-gfm/unnamed-chunk-9-1.png" width="90%" />
 
+The theoretical and simulated values differ due to dynamic changes in
+the model.
+
 # **Part 2: SIS Model**
 
 ## Question 3
@@ -242,6 +245,21 @@ results from the formula derived from the model (I*/N = 1-1/R0 and S*/N
 = 1/R0)? Hint: what is R0 for the SIS model?
 
 ``` r
+S_last = SIS_df$S[nrow(SIS_df)] / N
+I_last = SIS_df$I[nrow(SIS_df)] / N
+
+print(S_last)
+```
+
+    ## [1] 0.6000033
+
+``` r
+print(I_last)
+```
+
+    ## [1] 0.3999967
+
+``` r
 R0 = parameters["beta"] / parameters["gamma"]
 
 S_equilibrium = 1 / R0
@@ -259,21 +277,6 @@ print(I_equilibrium)
 
     ## beta 
     ##  0.4
-
-``` r
-S_last = SIS_df$S[nrow(SIS_df)] / N
-I_last = SIS_df$I[nrow(SIS_df)] / N
-
-print(S_last)
-```
-
-    ## [1] 0.6000033
-
-``` r
-print(I_last)
-```
-
-    ## [1] 0.3999967
 
 # **Part 3: SEIR Model**
 
@@ -333,12 +336,34 @@ seir_plot = ggplot(seir_df, aes(x = time)) +
 print(seir_plot)
 ```
 
-<img src="Homework-4_files/figure-gfm/unnamed-chunk-19-1.png" width="90%" />
+<img src="Homework-4_files/figure-gfm/unnamed-chunk-20-1.png" width="90%" />
 
 ## Quetsion 7
 
 Compare S, I, Incidence, over time computed by the 2 models. What are
 the differences between the two simulations?
+
+``` r
+N = 1e5
+S0 = N - E0 - I0
+I0 = 0
+E0 = 10
+R0 = 0
+
+beta = 0.6
+gamma = 1 / 3
+alpha = 1/1.5
+
+state = c(S = S0, E = E0, I = I0, R = R0)
+parameters = c(beta = beta, gamma = gamma, alpha = alpha)
+times = seq(0, 100, by = 1)
+```
+
+``` r
+basic_SIR_df$S_frac = basic_SIR_df$S / N
+basic_SIR_df$I_frac = basic_SIR_df$I / N
+basic_SIR_df$Incidence = c(0, diff(basic_SIR_df$I_frac))
+```
 
 ``` r
 basic_SIR_plot = ggplot() +
@@ -351,7 +376,6 @@ basic_SIR_plot = ggplot() +
   theme_minimal() +
   theme(legend.position = "bottom")
 
-# Plot for SIR model with demography
 SIRdem_plot = ggplot() +
   geom_line(data = percent_sim_df, aes(x = time, y = S_frac, color = "Susceptible (SIR with Demography)")) +
   geom_line(data = percent_sim_df, aes(x = time, y = I_frac, color = "Infected (SIR with Demography)")) +
@@ -367,4 +391,10 @@ SIRdem_plot = ggplot() +
 basic_SIR_plot + SIRdem_plot
 ```
 
-<img src="Homework-4_files/figure-gfm/unnamed-chunk-21-1.png" width="90%" />
+<img src="Homework-4_files/figure-gfm/unnamed-chunk-24-1.png" width="90%" />
+
+Comparing the two models, introducing demography impacts the equilibrium
+of the disease, Without demography, the model leads to an epidemic that
+ends after all susceptible individuals are infected. With demography,
+there is long-term equilibrium with susceptible and infected populations
+fluctuating.
